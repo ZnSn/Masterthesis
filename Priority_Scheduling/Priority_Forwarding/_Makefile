@@ -1,0 +1,16 @@
+SIM_BOTH = dpdk_scheduling
+
+.DEFAULT_GOAL := all
+MY_TARGETS = $(SIM_BOTH)
+
+.PHONY: $(SIM_BOTH)
+$(SIM_BOTH):
+	@$(MAKE) -C $@;
+
+.PHONY: all 
+all: $(MY_TARGETS)
+
+.PHONY: clean
+clean: 
+	rm -f common/*.o common/*~ *~ 
+	cd $(SIM_BOTH) && $(MAKE) clean

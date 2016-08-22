@@ -1,0 +1,15 @@
+/*
+ * ncs_simulation.h
+ *
+ *  Created on: Apr 18, 2016
+ *      Author: stephan
+ */
+
+#ifndef SRC_NCS_SIMULATION_H_
+#define SRC_NCS_SIMULATION_H_
+
+
+void test();
+
+
+#endif /* SRC_NCS_SIMULATION_H_ */

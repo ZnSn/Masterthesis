@@ -1,0 +1,17 @@
+#include "common.h"
+
+typedef struct QueueNode QueueNode;
+
+struct QueueNode
+{
+    Payload* payload;
+    QueueNode* ptr;
+};
+ 
+
+bool queue_enq(Payload* payload);
+Payload* queue_deq();
+bool queue_empty();
+
+QueueNode* create_node();
+

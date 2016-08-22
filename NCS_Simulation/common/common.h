@@ -1,0 +1,100 @@
+/*
+ * common.h
+ *
+ *  Created on: Apr 14, 2016
+ *      Author: stephan
+ */
+
+#ifndef _NCS_SIM_DPDK_COMMON_H_
+#define _NCS_SIM_DPDK_COMMON_H_
+
+#include <inttypes.h>
+#include <rte_eal.h>
+#include <rte_ethdev.h>
+#include <rte_cycles.h>
+#include <rte_lcore.h>
+#include <rte_mbuf.h>
+#include <rte_ip.h>
+#include <rte_udp.h>
+
+#include <sched.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <signal.h>
+#include <math.h>
+
+#include "config.h"
+#include "ncs_simulation.h"
+
+#define NUM_MBUFS 8000
+#define MBUF_CACHE_SIZE 256
+#define TX_RING_SIZE 512
+#define TX_BURST_SIZE 1
+#define RX_RING_SIZE 512
+
+#define BASE_PERIOD_NS pow(10,5)
+#define PKT_CREATION_TIME_NS (1 * pow(10, 3))
+#define SLOT_OFFSET_NS (0 * pow(10, 3))
+
+#define PAYLOAD_SIZE 40
+#define PRE_WAIT   1
+
+// Struct Definitions
+typedef struct rte_mempool* mempoolptr;
+
+typedef struct _Payload {
+	int seq_nr;
+	double* y;
+}Payload;
+
+typedef struct QueueNode QueueNode;
+struct QueueNode {
+    Payload* payload;
+    QueueNode* ptr;
+};
+
+typedef struct Queue {
+	int queue_count;
+	QueueNode* front;
+	QueueNode* rear;
+}Queue;
+
+Payload *new_payload(int, double*);
+void delete_Payload(Payload*);
+
+// Configuration parameters
+extern const int TX_QUEUES;
+extern const int TX_QUEUE_ID;
+extern const int RX_QUEUES;
+extern const int RX_QUEUE_ID;
+
+// Operational parameters
+extern volatile int RCV_PKT;
+extern volatile int SND_PKT;
+extern volatile int PKT_TRIGGER;
+extern volatile int TRIGGER_RECEIVER;
+
+extern struct ether_addr src_address;
+extern struct ether_addr dst_address;
+extern struct rte_eth_conf port_conf;
+
+void setup_sender(mempoolptr);
+void setup_receiver(mempoolptr);
+
+// Signal handlers
+void sig_int(int signo);
+void sig_timer(int signo);
+void signal_handler(int sig);
+
+// Simulation parameters
+extern unsigned long int current_k;
+extern Simulation* simulation_instance[NUM_INSTANCES];
+extern Queue* simulation_queues[NUM_INSTANCES];
+
+// Helper
+void SetPayload(char* payload_ptr, double* y, unsigned long int seqNr, double prio);
+void GetPayload(char* payload_ptr, double** y, unsigned long int* seqNr, double* prio);
+void initialize_simulation(double ts, double rate);
+
+#endif // _NCS_SIM_DPDK_COMMON_H_

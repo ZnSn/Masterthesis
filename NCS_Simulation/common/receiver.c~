@@ -1,0 +1,127 @@
+/*
+ * receiver.c
+ *
+ *  Created on: Apr 14, 2016
+ *      Author: stephan
+ */
+
+#include "receiver.h"
+#include "common.h"
+#include "config.h"
+#include <math.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include "ncs_simulation.h"
+#include "queue.h"
+
+int receive_pkt(__attribute__((unused)) void *args) {
+
+    unsigned long int ret, index, sampleIndex = 0;
+    unsigned long int i;
+    char fileLog[32];
+    struct rte_mbuf *recd_bufs[RX_RING_SIZE];
+    unsigned char *payload_ptr;
+    FILE *fLog;
+    unsigned long int seqNo;
+	//double* y[NUM_SAMPLES];
+	double* y = (double*)malloc(sizeof(double) * 3);
+    struct timeval timeval;
+
+    gettimeofday(&timeval, NULL);
+    unsigned long int recdTime = timeval.tv_sec * pow(10, 6) + timeval.tv_usec;
+
+	mkdir("Logging", 0777);
+
+    //sprintf(fileLog, "Logging/log-%ld", recdTime);
+    //fLog = fopen(fileLog, "w+");
+
+    while(RCV_PKT && (sampleIndex < NUM_SAMPLES)) {
+
+        ret = rte_eth_rx_burst(RX_PORT_NO, RX_QUEUE_ID, recd_bufs, RX_RING_SIZE);
+
+        if(ret > 0) {
+
+            for (index = 0; index < ret; index++) {
+
+	            payload_ptr = (rte_pktmbuf_mtod(recd_bufs[index], unsigned char *) + sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + sizeof(struct udp_hdr));
+                if (VLAN_PKT) {
+                    payload_ptr += sizeof(struct vlan_hdr);
+                }
+
+
+                memcpy(&seqNo, payload_ptr, sizeof(unsigned long int));
+                memcpy(y, payload_ptr+sizeof(unsigned long int), sizeof(double) * 3);
+
+				if (DEBUG)
+					printf("DPDK RECEIVER: RECEIVING Packet nr. %d with y:\n", seqNo);
+					printf("%f\n%f\n%f\n\n", y[0], y[1], y[2]);
+	
+				queue_enq(new_payload(seqNo, y));
+
+				if (NUM_SAMPLES >= 0) // Endless loop if num samples negative
+                	sampleIndex++;
+
+                rte_pktmbuf_free(recd_bufs[index]);
+            }
+
+			printf("QUEUE SIZE: %d\n\n", queue_size());
+        }
+
+		
+		if (TRIGGER_RECEIVER != 0) {
+
+			printf("DPDK RECEIVER TRIGGERED\n\n");
+
+			TRIGGER_RECEIVER = 0; // Reset Trigger
+			int gamma = 1; // Preset gamma
+
+			if (!queue_empty()) {
+			
+				// Take current package from queue
+				Payload* p = queue_deq();
+
+				int packet_seq_no = p->seq_nr;
+
+				printf("Seq No: %ld (%ld)\n", packet_seq_no, current_k-1);
+				printf("%f\n%f\n%f\n\n", p->y[0], p->y[1], p->y[2]);
+			
+				// Remove old packets from queue
+				while (!queue_empty() && (packet_seq_no < current_k-1)) {
+					
+					printf("removing %ld, %ld, %d\n\n", packet_seq_no, current_k-1, queue_size());
+					delete_payload(p); // delete old payload
+
+					p = queue_deq();
+					packet_seq_no = p->seq_nr;
+				}
+		
+				// Check for current packet
+				if (queue_empty() && (packet_seq_no < current_k-1)) {
+					gamma = 0;		
+					printf("RECEIVER: Setting gamma zero (%d, %d)\n\n", packet_seq_no, current_k-1);
+				}
+	
+				printf("\n");
+
+				// Calculate u
+				simulation_calculate_u(simulation_instance, gamma, p->y);
+				delete_payload(p);
+
+				simulation_calculate_x(simulation_instance);
+			}
+			else 
+				printf("RECEIVER: Queue empty\n\n");
+		}	
+    }
+
+    // If logging is needed, write into logfile
+    //for (i = 0; i < sampleIndex; i++)
+    //    fprintf(fLog, "%ld %f\n", seqNo[i], y[i]);
+    //fclose(fLog);
+
+    SND_PKT = 0;
+    PKT_TRIGGER = 0;
+	printf("DPDK RECEIVER: RETURNING ...\n");
+    return 0;
+}
+
