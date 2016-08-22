@@ -23,25 +23,22 @@ class Simulation
         Simulation(int sim_id, double sample_time, double arrival_rate);
 
         // Internal state parameters
-        arma::vec x;
-        arma::vec x_hat;
-        arma::vec u;
-        arma::mat P;
-        arma::vec y;
-		arma::mat J_abs;
-		arma::mat Pd;
+	arma::vec x;
+	arma::vec x_hat;
+	arma::vec u;
+	arma::mat P;
+	arma::vec y;
+	arma::mat J_abs;
+	arma::mat Pd;
 
         int x_dim;
         int y_dim;
         int u_dim;
         int sim_id;
         
-        std::ofstream file_stream;
-		std::string filename; 
-
         // Interface functions
         double* calculate_y();
-		double* calculate_v();
+	double* calculate_v();
         int calculate_u(int gamma, double* y);
         int calculate_x(double** val_j);
         void preset_x(double*, int);

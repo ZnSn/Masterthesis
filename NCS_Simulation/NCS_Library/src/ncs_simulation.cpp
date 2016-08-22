@@ -53,8 +53,6 @@ this->J_abs = x.t() * ds->Q * x;
 
 preset_pd();
 
-filename = "/home/zinklesn/tmp/ncs_" + std::to_string(sim_id) + ".txt";
-
 #ifdef DEBUG_EXTENDED
 std::cout << std::endl << " Starting Simulation with the following system matrices:" << std::endl
 	<< "  A: " << std::endl << ds->A << std::endl
@@ -202,10 +200,6 @@ int Simulation::calculate_x(double** val_j) {
 	#ifdef DEBUG
 	std::cout << "SIMULATION (" << this->sim_id << "): Calculated x ( A * x + B * u + w )" << std::endl << x << std::endl;
 	#endif
-	
-	file_stream.open(filename, std::ios::out | std::ios::app);
-	file_stream << this->x[2] << std::endl;
-	file_stream.close();
 	
 	if (fabs(x[2]) > M_PI/2) {
 		std::cout << "SIMULATION (" << this->sim_id << "): ERROR - Angle over 90 degree (" << x[2] << ")" << std::endl;
